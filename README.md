@@ -1,6 +1,7 @@
 # MeshIoT Manager
 
-Enterprise MERN + Electron desktop app for mesh IoT device management, TCP/MAC device connection, and MongoDB persistence.
+Enterprise MERN + Electron desktop app for mesh IoT device management, TCP/MAC device connection, and MongoDB persistence.<br>
+<img width="1919" height="907" alt="image" src="https://github.com/user-attachments/assets/a45108e6-15e5-452e-9dcc-4f2045ed7f9e" />
 
 ## What this project includes
 
