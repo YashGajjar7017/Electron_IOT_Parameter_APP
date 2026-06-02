@@ -1,0 +1,64 @@
+{
+  "name": "mesh-iot-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MERN stack Electron desktop application for mesh IoT device management.",
+  "main": "electron/src/main.js",
+  "scripts": {
+    "dev:server": "nodemon --watch server --exec node server/src/index.js",
+    "dev:client": "vite --config client/vite.config.js",
+    "dev:electron": "wait-on http://localhost:4000/api/health http://localhost:5173 && set ELECTRON_START_URL=http://localhost:5173 && npx electron .",
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\" \"npm:dev:electron\"",
+    "build:client": "vite build --config client/vite.config.js",
+    "build": "npm run build:client",
+    "start": "electron .",
+    "package": "npm run build && electron-builder --publish never",
+    "package:dir": "npm run build && electron-builder --dir"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "electron-is-dev": "^2.0.0",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.1",
+    "electron": "^26.0.0",
+    "electron-builder": "^24.3.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "nodemon": "^3.0.1",
+    "vite": "^5.4.1",
+    "wait-on": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.enterprise.meshiot.manager",
+    "productName": "MeshIoT Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "client/dist/**",
+      "electron/src/**",
+      "server/src/**",
+      "shared/**",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "publisherName": "Enterprise IoT Inc."
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false
+    }
+  }
+}
