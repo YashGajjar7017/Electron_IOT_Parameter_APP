@@ -24,9 +24,9 @@ function createWindow() {
     (isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../../client/dist/index.html')}`);
   mainWindow.loadURL(startUrl);
 
-//   if (isDev) {
-//     mainWindow.webContents.openDevTools();
-//   }
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
 }
 
 function startBackend() {

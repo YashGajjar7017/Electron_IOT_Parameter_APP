@@ -7,7 +7,7 @@
   "scripts": {
     "dev:server": "nodemon --watch server --exec node server/src/index.js",
     "dev:client": "vite --config client/vite.config.js",
-    "dev:electron": "wait-on http://localhost:4000/api/health http://localhost:5173 && set ELECTRON_START_URL=http://localhost:5173 && npx electron .",
+    "dev:electron": "wait-on http://localhost:4000/api/health http://localhost:5173 && npx electron .",
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\" \"npm:dev:electron\"",
     "build:client": "vite build --config client/vite.config.js",
     "build": "npm run build:client",
