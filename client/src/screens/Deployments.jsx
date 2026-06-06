@@ -1,29 +1,32 @@
 import React, { useEffect, useState } from 'react';
 
-const apiBase = 'http://localhost:4000';
-
-export default function Deployments() {
+export default function Deployments({ apiBase }) {
   const [deployments, setDeployments] = useState([]);
 
   useEffect(() => {
+    if (!apiBase) {
+      setDeployments([]);
+      return;
+    }
+
     fetch(`${apiBase}/api/deployments`)
       .then((r) => r.json())
       .then(setDeployments)
       .catch(() => setDeployments([]));
-  }, []);
+  }, [apiBase]);
 
   return (
     <div>
       <div className="panel-header">
         <div>
-          <p className="panel-label">Deployments</p>
-          <h2>Firmware rollout and live deployment progress</h2>
+          <p className="panel-label">OTA Center</p>
+          <h2>Deployment orchestration</h2>
         </div>
       </div>
 
       {deployments.length === 0 ? (
         <div className="panel">
-          <p>No deployments available yet. Create a deployment from the backend or add a new deployment.</p>
+          <p>No deployments configured yet. Start a firmware rollout from the firmware manager or backend configuration.</p>
         </div>
       ) : (
         <div className="deployments-list">

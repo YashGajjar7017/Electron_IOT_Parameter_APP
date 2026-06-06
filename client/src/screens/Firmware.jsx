@@ -1,26 +1,47 @@
 import React, { useEffect, useState } from 'react';
 
-export default function Firmware() {
+export default function Firmware({ apiBase }) {
   const [firmware, setFirmware] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/firmware')
+    if (!apiBase) {
+      setFirmware([]);
+      return;
+    }
+
+    fetch(`${apiBase}/api/firmware`)
       .then((r) => r.json())
       .then(setFirmware)
       .catch(() => setFirmware([]));
-  }, []);
+  }, [apiBase]);
 
   return (
     <div>
-      <h2>Firmware Library</h2>
-      <p>Store and manage firmware release assets.</p>
-      <ul>
-        {firmware.map((fw) => (
-          <li key={fw._id}>
-            {fw.name} v{fw.version} ({fw.size || 0} bytes)
-          </li>
-        ))}
-      </ul>
+      <div className="panel-header">
+        <div>
+          <p className="panel-label">Firmware Manager</p>
+          <h2>Asset library</h2>
+        </div>
+      </div>
+
+      <div className="firmware-list">
+        {firmware.length === 0 ? (
+          <div className="panel">
+            <p>No firmware revisions available. Upload firmware through the backend or sync your repository.</p>
+          </div>
+        ) : (
+          firmware.map((fw) => (
+            <div key={fw._id} className="service-card">
+              <div className="device-header">
+                <strong>{fw.name}</strong>
+                <span>v{fw.version}</span>
+              </div>
+              <div className="device-line">Size: {fw.size || 0} bytes</div>
+              <div className="device-line">Checksum: {fw.checksum || 'n/a'}</div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from 'react';
 
-const apiBase = 'http://localhost:4000';
-
-export default function Devices() {
+export default function Devices({ apiBase }) {
   const [devices, setDevices] = useState([]);
   const [connectResult, setConnectResult] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!apiBase) {
+      setDevices([]);
+      return;
+    }
+
     fetch(`${apiBase}/api/devices`)
       .then((r) => r.json())
       .then(setDevices)
       .catch(() => setDevices([]));
-  }, []);
+  }, [apiBase]);
 
   const handleConnect = async (device) => {
     if (!window.api?.connectToDevice) {
-      setConnectResult('Device service only available inside Electron.');
+      setConnectResult('Device validation is only available inside Electron.');
       return;
     }
 
@@ -43,14 +46,14 @@ export default function Devices() {
       <div className="panel-header">
         <div>
           <p className="panel-label">Devices</p>
-          <h2>Register and test your device connections</h2>
+          <h2>Fleet device registry</h2>
         </div>
       </div>
 
       <div className="device-list">
         {devices.length === 0 ? (
           <div className="panel">
-            <p>No configured devices found. Add a device in the backend or create one here.</p>
+            <p>No registered devices found yet. Provision devices through the backend or import them from your fleet manager.</p>
           </div>
         ) : (
           devices.map((device) => (
@@ -61,7 +64,7 @@ export default function Devices() {
                   <p className="device-line">{device.ipAddress}:{device.port}</p>
                 </div>
                 <button onClick={() => handleConnect(device)} disabled={loading}>
-                  {loading ? 'Checking…' : 'Test connection'}
+                  {loading ? 'Testing…' : 'Check link'}
                 </button>
               </div>
               <p className="device-notes">MAC: {device.macAddress}</p>
@@ -72,7 +75,7 @@ export default function Devices() {
       </div>
 
       {connectResult && (
-        <div className="panel" style={{ marginTop: '18px' }}>
+        <div className="panel panel--secondary" style={{ marginTop: '18px' }}>
           <p>{connectResult}</p>
         </div>
       )}

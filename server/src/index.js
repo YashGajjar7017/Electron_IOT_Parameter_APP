@@ -19,6 +19,7 @@ app.use('/api/firmware', require('./routes/firmware'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/deployments', require('./routes/deployments'));
 app.use('/api/services', require('./routes/services'));
+app.use('/api/logs', require('./routes/logs'));
 app.get('/api/health', (_req, res) => {
   return res.json({ status: 'ok' });
 });

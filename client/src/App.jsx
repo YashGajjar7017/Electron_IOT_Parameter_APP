@@ -1,72 +1,155 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Activity,
+  Airplay,
+  BarChart3,
+  Cloud,
+  Layers,
+  Monitor,
+  Server,
+  Settings2,
+  ShieldCheck,
+  Terminal,
+  BookOpen,
+  Pulse
+} from 'lucide-react';
 import Dashboard from './screens/Dashboard';
 import Devices from './screens/Devices';
 import Deployments from './screens/Deployments';
 import Firmware from './screens/Firmware';
 import Groups from './screens/Groups';
 import Settings from './screens/Settings';
+import Diagnostics from './screens/Diagnostics';
+import LiveMonitor from './screens/LiveMonitor';
+import Logs from './screens/Logs';
+import Analytics from './screens/Analytics';
+import DeviceTerminal from './screens/DeviceTerminal';
 
-const apiBase = 'http://localhost:4000';
-const navLinks = ['dashboard', 'devices', 'deployments', 'firmware', 'groups', 'settings'];
+const navLinks = [
+  { key: 'dashboard', label: 'Dashboard', icon: Monitor },
+  { key: 'devices', label: 'Devices', icon: Server },
+  { key: 'live-monitor', label: 'Live Monitor', icon: Pulse },
+  { key: 'deployments', label: 'OTA Center', icon: Cloud },
+  { key: 'firmware', label: 'Firmware Manager', icon: Airplay },
+  { key: 'groups', label: 'Mesh Network', icon: Layers },
+  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { key: 'logs', label: 'Logs', icon: BookOpen },
+  { key: 'device-terminal', label: 'Device Terminal', icon: Terminal },
+  { key: 'diagnostics', label: 'Diagnostics', icon: ShieldCheck },
+  { key: 'settings', label: 'Settings', icon: Settings2 }
+];
+
+const initialServices = {
+  deviceCount: 0,
+  firmwareCount: 0,
+  groupCount: 0,
+  deploymentCount: 0,
+  updatedAt: ''
+};
 
 function App() {
   const [view, setView] = useState('dashboard');
-  const [status, setStatus] = useState('Starting...');
-  const [services, setServices] = useState({
-    deviceCount: 0,
-    firmwareCount: 0,
-    groupCount: 0,
-    deploymentCount: 0,
-    updatedAt: ''
-  });
+  const [status, setStatus] = useState('Initializing');
+  const [apiBase, setApiBase] = useState('http://127.0.0.1:4000');
+  const [services, setServices] = useState(initialServices);
   const [lastSync, setLastSync] = useState('Pending');
-
-  const fetchServices = async () => {
-    try {
-      const response = await fetch(`${apiBase}/api/services`);
-      if (!response.ok) {
-        throw new Error('Service fetch failed');
-      }
-      const data = await response.json();
-      setServices(data);
-      setLastSync(new Date(data.updatedAt || Date.now()).toLocaleTimeString());
-      setStatus('Live');
-    } catch (error) {
-      setStatus('Backend offline');
-      setLastSync(new Date().toLocaleTimeString());
-    }
-  };
+  const [startupStatus, setStartupStatus] = useState({
+    renderer: 'pending',
+    backend: 'pending',
+    websocket: 'pending',
+    mqtt: 'pending'
+  });
 
   useEffect(() => {
-    fetch(`${apiBase}/api/health`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.status === 'ok') {
+    if (window.api?.getBackendUrl) {
+      window.api
+        .getBackendUrl()
+        .then((url) => setApiBase(url))
+        .catch(() => {
+          setApiBase('http://127.0.0.1:4000');
+        });
+    }
+
+    if (window.api?.getMetadata) {
+      window.api.getMetadata().then((metadata) => {
+        setStartupStatus((current) => ({
+          ...current,
+          renderer: metadata.rendererUrl ? 'ready' : 'pending'
+        }));
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    async function refreshHealth() {
+      try {
+        const response = await fetch(`${apiBase}/api/health`);
+        const json = await response.json();
+        if (response.ok && json.status === 'ok') {
           setStatus('Backend ready');
+          setStartupStatus((current) => ({ ...current, backend: 'online', websocket: 'waiting', mqtt: 'disabled' }));
+        } else {
+          throw new Error('Unhealthy backend');
         }
-      })
-      .catch(() => setStatus('Backend not ready'));
+      } catch (error) {
+        setStatus('Backend offline');
+        setStartupStatus((current) => ({ ...current, backend: 'offline' }));
+      }
+      setLastSync(new Date().toLocaleTimeString());
+    }
+
+    refreshHealth();
+    const interval = setInterval(refreshHealth, 5000);
+    return () => clearInterval(interval);
+  }, [apiBase]);
+
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const response = await fetch(`${apiBase}/api/services`);
+        if (!response.ok) {
+          throw new Error('Service load failed');
+        }
+        const data = await response.json();
+        setServices(data);
+        setLastSync(new Date(data.updatedAt || Date.now()).toLocaleTimeString());
+        setStatus('Live');
+      } catch (_) {
+        setStatus('Backend offline');
+      }
+    }
 
     fetchServices();
     const interval = setInterval(fetchServices, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [apiBase]);
 
   const currentViewTitle = useMemo(
-    () => view.charAt(0).toUpperCase() + view.slice(1),
+    () => navLinks.find((item) => item.key === view)?.label || 'Dashboard',
     [view]
   );
 
   const renderView = () => {
     switch (view) {
       case 'devices':
-        return <Devices />;
+        return <Devices apiBase={apiBase} />;
+      case 'live-monitor':
+        return <LiveMonitor apiBase={apiBase} />;
       case 'deployments':
-        return <Deployments />;
+        return <Deployments apiBase={apiBase} />;
       case 'firmware':
-        return <Firmware />;
+        return <Firmware apiBase={apiBase} />;
       case 'groups':
-        return <Groups />;
+        return <Groups apiBase={apiBase} />;
+      case 'analytics':
+        return <Analytics apiBase={apiBase} />;
+      case 'logs':
+        return <Logs apiBase={apiBase} />;
+      case 'device-terminal':
+        return <DeviceTerminal apiBase={apiBase} />;
+      case 'diagnostics':
+        return <Diagnostics apiBase={apiBase} />;
       case 'settings':
         return <Settings />;
       default:
@@ -76,53 +159,60 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div>
-          <p className="brand-label">MeshIoT Manager</p>
-          <h1>Device Control Center</h1>
-          <p className="header-copy">
-            Use the sidebar to jump between services, monitor live engine status, and manage devices with glassy controls.
-          </p>
+      <header className="app-header glass-panel">
+        <div className="brand-block">
+          <div className="brand-icon">⚡</div>
+          <div>
+            <p className="brand-label">MeshIoT Prism</p>
+            <h1>Command & health dashboard</h1>
+            <p className="header-copy">
+              Unified monitoring, device orchestration, and gateway diagnostics for enterprise ESP32 fleets.
+            </p>
+          </div>
         </div>
+
         <div className="header-status-panel">
-          <div className="status-card">
-            <span>Service</span>
+          <div className="status-card status-card--accent">
+            <span>Current view</span>
             <strong>{currentViewTitle}</strong>
           </div>
           <div className="status-card">
-            <span>Engine</span>
-            <strong>{status}</strong>
+            <span>Backend</span>
+            <strong>{startupStatus.backend}</strong>
           </div>
           <div className="status-card">
-            <span>Synced</span>
-            <strong>{lastSync}</strong>
+            <span>Renderer</span>
+            <strong>{startupStatus.renderer}</strong>
           </div>
         </div>
       </header>
 
       <div className="shell-body">
-        <aside className="side-nav">
+        <aside className="side-nav glass-panel">
           <div className="nav-group">
-            <h2>Services</h2>
-            {navLinks.map((key) => (
-              <button
-                key={key}
-                className={view === key ? 'nav-button active' : 'nav-button'}
-                onClick={() => setView(key)}
-              >
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </button>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <button
+                  key={link.key}
+                  className={view === link.key ? 'nav-button active' : 'nav-button'}
+                  onClick={() => setView(link.key)}
+                >
+                  <Icon className="nav-icon" />
+                  <span>{link.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="service-summary">
-            <h3>Live service data</h3>
+            <h3>Fleet overview</h3>
             <div className="metric-row">
               <span>Devices</span>
               <strong>{services.deviceCount}</strong>
             </div>
             <div className="metric-row">
-              <span>Firmware</span>
+              <span>Firmware versions</span>
               <strong>{services.firmwareCount}</strong>
             </div>
             <div className="metric-row">
@@ -137,45 +227,54 @@ function App() {
         </aside>
 
         <main className="main-center">
-          <section className="control-panel">
+          <motion.section
+            key={view}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.26, ease: 'easeOut' }}
+            className="control-panel glass-panel"
+          >
             <div className="panel-header">
               <div>
                 <p className="panel-label">{currentViewTitle}</p>
-                <h2>{currentViewTitle} control center</h2>
+                <h2>{currentViewTitle} Overview</h2>
               </div>
-              <div className="panel-chip">All services live</div>
+              <div className="panel-chip">Live system status</div>
             </div>
             {renderView()}
-          </section>
+          </motion.section>
         </main>
 
-        <aside className="info-panel">
+        <aside className="info-panel glass-panel">
           <div className="info-box">
-            <h3>Realtime values</h3>
-            <p>Service engine metrics are fetched every 5 seconds from the backend.</p>
-            <div className="metric-row">
-              <span>Last health check</span>
-              <strong>{lastSync}</strong>
+            <div className="info-tiles">
+              <div className="info-tile">
+                <span>Engine status</span>
+                <strong>{status}</strong>
+              </div>
+              <div className="info-tile">
+                <span>WebSocket</span>
+                <strong>{startupStatus.websocket}</strong>
+              </div>
+              <div className="info-tile">
+                <span>MQTT</span>
+                <strong>{startupStatus.mqtt}</strong>
+              </div>
             </div>
-            <div className="metric-row">
-              <span>Backend state</span>
-              <strong>{status}</strong>
-            </div>
-            <div className="value-block">
-              <p>Control tokens</p>
-              <strong>{services.deviceCount + services.firmwareCount + services.groupCount}</strong>
-            </div>
-            <div className="value-block">
-              <p>Active deployments</p>
-              <strong>{services.deploymentCount}</strong>
+
+            <div className="panel-note">
+              <p>
+                Live telemetry begins once the backend is ready. Use this panel to verify connectivity and engine health before launching deployments.
+              </p>
             </div>
           </div>
         </aside>
       </div>
 
-      <footer className="app-footer">
-        <span>MeshIoT Manager • Glassy service dashboard</span>
-        <span>2026 • Electron + React + Node</span>
+      <footer className="app-footer glass-panel">
+        <span>MeshIoT Manager • Premium glass command UI</span>
+        <span>Built for 500+ ESP32 edge units</span>
       </footer>
     </div>
   );
